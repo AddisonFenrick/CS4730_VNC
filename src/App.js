@@ -4,11 +4,13 @@ import axios from 'axios';
 import { withCookies } from 'react-cookie';
 
 function App() {
-  var ticket = '';
-  var csrf = '';
-  var vncTicket = '';
-  var port = 5900;
-  const [autoConnect, setAutoConnect] = useState(true);
+  const [ticket, setTicket] = useState('');
+  const [csrf, setCsrf] = useState('');
+  const [vncTicket, setVncTicket] = useState('');
+  const [cert, setcert] = useState('');
+  const [port, setPort] = useState(5900);
+  const [autoConnect, setAutoConnect] = useState(false);
+  const [connectionstring, setConnectionstring] = useState('');
 
   useEffect(() => {
     // Your existing useEffect code
@@ -22,16 +24,17 @@ function App() {
     .then(function (response) {
       const data = response.data.data;
       console.log(data);
-      csrf = (data.CSRFPreventionToken);
-      ticket = (data.ticket);
-      console.log('Ticket = ', ticket);
-      console.log('CSRF = ', csrf);
-      document.cookie = `PVEAuthCookie=${encodeURIComponent(ticket)}; path=/;`;
+      setCsrf(data.CSRFPreventionToken);
+      setTicket(data.ticket);
+      console.log('Ticket = ', data.ticket);
+      console.log('CSRF = ', data.CSRFPreventionToken);
+      document.cookie = `PVEAuthCookie=${encodeURIComponent(data.ticket)}; path=/;`;
     })
     .catch(function (error) {
       console.log(error);
     });
   };
+
   const get_status = () => {
     axios.get('/api2/json/nodes/vbox/qemu/100/status/current?', {
       headers: {
@@ -61,8 +64,14 @@ function App() {
       })
     .then(function (response) {
       console.log(response);
-      vncTicket = (response.data.data.ticket); // Assuming the VNC ticket is in response.data.data.ticket
-      port = (response.data.data.port); // Assuming the port is in response.data.data.port
+      setVncTicket(response.data.data.ticket); // Assuming the VNC ticket is in response.data.data.ticket
+      console.log('VNC Ticket = ', response.data.data.ticket);
+      setPort(response.data.data.port); // Assuming the port is in response.data.data.port
+      console.log('Port = ', response.data.data.port);
+      setcert(response.data.data.cert); // Assuming the cert is in response.data.data.cert
+      console.log('Cert = ', response.data.data.cert);
+      setConnectionstring(`/api2/json/nodes/vbox/qemu/100/vncwebsocket?port=${response.data.data.port}&vncticket=${encodeURIComponent(response.data.data.ticket)}`);
+      console.log('Connection String = ', connectionstring);
     })
     .catch(function (error) {
       console.log(error);
@@ -70,7 +79,11 @@ function App() {
   };
 
   const handleConnect = () => {
+    // get_ticket();
+    // get_ticket_vnc();
+
     setAutoConnect(true);
+    console.log('port', port, 'vncTicket', vncTicket);
   };
 
   return (
@@ -80,37 +93,32 @@ function App() {
       <button onClick={get_status}>Get Status</button>
       <button onClick={handleConnect}>Connect</button>
       <br />
-      {/*<button onClick={handleConnect}>Connect</button>*/}
-      {connect &&(
-      <VncScreen
-        // autoConnect={autoConnect}
-        url={`wss://localhost:8006/api2/json/nodes/vbox/qemu/100/vncwebsocket?port=${port}&vncticket=${vncTicket}`}
-        // url = '/api2/json/nodes/vbox/qemu/100/vncwebsocket?port=5900&vncticket=PVEVNC:67A1C64F::EMiNMPplsCIIYcWC25c/90xZIDGBqT6dMmuzdm2+f3LO1F3EiT0UJ9R/QzZbr8A4b3CCTXkUVnCUoe2qp2IfVmINAssFIQVHIMk798LUCHX79wRphT2CjTOCurNXjZAcMF4QzolBJCHQ5IA6CON7uGTbfYQd775UsKBDacHRsiEA8JFai4VaKDVRd9yoa368uJbFc+OaWTHzI6EIiD78r9aLTgovpPjmcPzGHrXlTCXIPvZWXtCabhAPHlKoo1Dnzwf4X+zmct20f1VF8NuD5d0cqd2F7787PynVehGt0MvOx4NURFHazjWGWX3gdDy/WdeT1dBvlXlsPapj3Io/AQ=='
-        scaleViewport
-        background="black"
-        retryDuration={1000}
-        autoConnect={autoConnect}
-        onCredentialsRequired={() => {
+      {autoConnect && vncTicket && (
+        <VncScreen
+          url={`ws://localhost:3000${connectionstring}`}
+          
+          background="Gray"
+          retryDuration={100}
+          style={{
+            width: '75vw',
+            height: '75vh',
+          }}
+          onSecurityFailure={() => {
+            console.log('Security Failure');
+          }}
+          
+          onConnect={() => {
+            console.log('connected');
+          }}
+          onDisconnect={() => {
+            console.log('disconnected');
+          }}
+          onError={(error) => {
+            console.log('error', error);
+          }}
 
-        }}
-        style={{
-          width: '75vw',
-          height: '75vh',
-        }}
-        onSecurityFailure={() => {
-          console.log('Security Failure');
-        }
-    
-    }
-        onConnect
-={
-          () => {
-            console.log(vncTicket);
-
-          }
-        }
-      />)}
-      {/* <iframe src="http://localhost:8006/?console=kvm&novnc=1&vmid=100&vmname=testVM&node=vbox&resize=off" title="Proxmox" style={{ width: '90%', height: '90vh' }} /> */}
+        />
+      )}
     </div>
   );
 }
