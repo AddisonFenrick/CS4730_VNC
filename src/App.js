@@ -79,11 +79,16 @@ function App() {
   };
 
   const handleConnect = () => {
-    // get_ticket();
-    // get_ticket_vnc();
+  
 
     setAutoConnect(true);
     console.log('port', port, 'vncTicket', vncTicket);
+    axios.get(connectionstring, {}
+
+    ).then(function (response) {
+      console.log(response);
+    }
+  );
   };
 
   return (
@@ -96,6 +101,7 @@ function App() {
       {autoConnect && vncTicket && (
         <VncScreen
           url={`ws://localhost:3000${connectionstring}`}
+          // ${connectionstring}
           
           background="Gray"
           retryDuration={100}
