@@ -8,7 +8,7 @@ function App() {
   var csrf = '';
   var vncTicket = '';
   var port = 5900;
-  const [autoConnect, setAutoConnect] = useState(false);
+  const [autoConnect, setAutoConnect] = useState(true);
 
   useEffect(() => {
     // Your existing useEffect code
@@ -32,15 +32,32 @@ function App() {
       console.log(error);
     });
   };
+  const get_status = () => {
+    axios.get('/api2/json/nodes/vbox/qemu/100/status/current?', {
+      headers: {
+        // 'CSRFPreventionToken': csrf,
+        // 'Cookie': `PVEAuthCookie=${ticket}`
+      }
+    })
+    .then(function (response) {
+      console.log(response);
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+  }
 
   const get_ticket_vnc = () => {
     axios.post('/api2/json/nodes/vbox/qemu/100/vncproxy', 
-      // CSRFPreventionToken: csrf,
-      {websocket: 1,
-      // withCredentials: true
-
-      // withCookies: true,
-
+      {
+        websocket: 1
+      },
+      {
+        withCredentials: true,
+        headers: {
+          'CSRFPreventionToken': csrf,
+          'Cookie': `PVEAuthCookie=${encodeURIComponent(ticket)}`
+        }
       })
     .then(function (response) {
       console.log(response);
@@ -60,9 +77,11 @@ function App() {
     <div>
       <button onClick={get_ticket}>Get Ticket</button>
       <button onClick={get_ticket_vnc}>Get VNC Ticket</button>
+      <button onClick={get_status}>Get Status</button>
       <button onClick={handleConnect}>Connect</button>
       <br />
       {/*<button onClick={handleConnect}>Connect</button>*/}
+      {connect &&(
       <VncScreen
         // autoConnect={autoConnect}
         url={`wss://localhost:8006/api2/json/nodes/vbox/qemu/100/vncwebsocket?port=${port}&vncticket=${vncTicket}`}
@@ -78,7 +97,19 @@ function App() {
           width: '75vw',
           height: '75vh',
         }}
-      />
+        onSecurityFailure={() => {
+          console.log('Security Failure');
+        }
+    
+    }
+        onConnect
+={
+          () => {
+            console.log(vncTicket);
+
+          }
+        }
+      />)}
       {/* <iframe src="http://localhost:8006/?console=kvm&novnc=1&vmid=100&vmname=testVM&node=vbox&resize=off" title="Proxmox" style={{ width: '90%', height: '90vh' }} /> */}
     </div>
   );
